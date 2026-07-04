@@ -11,7 +11,7 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* --- Ambient backdrop: soft glows + dot grid, tailwindcss.com-style ------- */
+/* --- Ambient backdrop: soft glows + dot grid ------------------------------- */
 .backdrop-glow {
   position: fixed;
   inset: 0;
@@ -32,16 +32,121 @@ body {
   mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 100%);
 }
 
-/* --- Glass cards ----------------------------------------------------------- */
+/* --- Film grain over everything -------------------------------------------- */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- Hero ------------------------------------------------------------------- */
+.hero-title {
+  font-size: clamp(4.5rem, 14vw, 11rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+.blob-1 {
+  width: 420px;
+  height: 420px;
+  background: #14b8a6;
+  opacity: 0.22;
+  top: -4rem;
+  left: 6%;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.blob-2 {
+  width: 380px;
+  height: 380px;
+  background: #8b5cf6;
+  opacity: 0.2;
+  top: 22%;
+  right: 4%;
+  animation: drift 24s ease-in-out infinite alternate-reverse;
+}
+.blob-3 {
+  width: 320px;
+  height: 320px;
+  background: #0ea5e9;
+  opacity: 0.12;
+  bottom: -5rem;
+  left: 38%;
+  animation: drift 28s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(70px, -50px) scale(1.18); }
+}
+
+/* --- Marquee strip ----------------------------------------------------------- */
+.marquee {
+  overflow: hidden;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.4);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* --- Ghost step numerals ------------------------------------------------------ */
+.ghost-num {
+  position: absolute;
+  top: -3rem;
+  left: -0.75rem;
+  z-index: 0;
+  font-size: clamp(5rem, 10vw, 8.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(148, 163, 184, 0.15);
+  pointer-events: none;
+  user-select: none;
+}
+.ghost-num-done {
+  -webkit-text-stroke: 1.5px rgba(45, 212, 191, 0.25);
+}
+
+/* --- Glass cards + cursor spotlight ------------------------------------------- */
 .card {
+  position: relative;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.15);
   background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 32px rgba(2, 6, 23, 0.45);
 }
-.card-glow {
-  position: relative;
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(45, 212, 191, 0.09),
+    transparent 65%
+  );
+}
+.card:hover::after {
+  opacity: 1;
 }
 .card-glow::before {
   content: "";
@@ -58,7 +163,7 @@ body {
   opacity: 0.6;
 }
 
-/* --- Motion ---------------------------------------------------------------- */
+/* --- Motion -------------------------------------------------------------------- */
 @keyframes fade-up {
   from {
     opacity: 0;
@@ -75,6 +180,19 @@ body {
 .delay-1 { animation-delay: 0.08s; }
 .delay-2 { animation-delay: 0.16s; }
 .delay-3 { animation-delay: 0.24s; }
+
+/* scroll-triggered reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
 
 @keyframes gradient-pan {
   0%, 100% { background-position: 0% 50%; }
@@ -104,6 +222,33 @@ body {
   animation: grow-bar 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* synced celebration: badge pop + gradient sweep across the card */
+@keyframes pop {
+  0% { transform: scale(0.5); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.badge-pop {
+  animation: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sync-flash {
+  overflow: hidden;
+}
+.sync-flash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(45, 212, 191, 0.16) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: sweep 1.1s ease-out 0.1s both;
+}
+@keyframes sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -60% 0; }
+}
+
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
@@ -128,4 +273,19 @@ body {
 .thin-scroll::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.25);
   border-radius: 3px;
+}
+
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .blob,
+  .gradient-text,
+  .pulse-dot {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

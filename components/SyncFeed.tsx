@@ -2,6 +2,7 @@
 
 import type { MappedPayload } from "@/lib/contract";
 import ConfirmCard from "@/components/ConfirmCard";
+import CountUp from "@/components/CountUp";
 
 export interface SyncItem {
   id: string;
@@ -31,7 +32,7 @@ function ConfidenceBadge({ value }: { value: number }) {
         />
       </span>
       <span className={`font-mono text-[11px] ${confidenceText(value)}`}>
-        {Math.round(value * 100)}%
+        <CountUp value={Math.round(value * 100)} />%
       </span>
     </span>
   );
@@ -54,7 +55,7 @@ export default function SyncFeed({ items, threshold, onConfirm }: SyncFeedProps)
           <article
             key={id}
             className={`card animate-fade-up rounded-2xl p-5 transition-colors ${
-              status === "pending" ? "!border-amber-500/40" : ""
+              status === "pending" ? "!border-amber-500/40" : "sync-flash"
             }`}
           >
             <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -75,7 +76,7 @@ export default function SyncFeed({ items, threshold, onConfirm }: SyncFeedProps)
               <span
                 className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs ${
                   status === "synced"
-                    ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    ? "badge-pop border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
                     : "border border-amber-500/40 bg-amber-500/10 text-amber-300"
                 }`}
               >
