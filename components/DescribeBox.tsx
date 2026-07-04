@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { compileIntent } from "@/lib/api";
 import type { Recipe } from "@/lib/contract";
 
 const EXAMPLES = [
@@ -23,17 +24,8 @@ export default function DescribeBox({ onCompiled }: DescribeBoxProps) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/compile-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: finalText }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? `Request failed (${res.status})`);
-        return;
-      }
-      onCompiled(data as Recipe);
+      const recipe: Recipe = await compileIntent(finalText);
+      onCompiled(recipe);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

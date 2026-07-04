@@ -1,41 +1,42 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { SourceProfile, SourceRecord } from "@/lib/contract";
+import { discoverSchema, extractRecords } from "@/lib/api";
+import type { SourceProfile } from "@/lib/contract";
 
 const QUICK_SOURCES = [
   {
     label: "CRM deals",
     desc: "JSON · clean + messy rows",
-    path: "/mock/deals.json",
+    path: "mock/deals.json",
     extract: false,
     icon: "M20 7l-8-4-8 4v10l8 4 8-4V7z",
   },
   {
     label: "Mystery CSV",
     desc: "Cryptic headers, unknown origin",
-    path: "/mock/unknown.csv",
+    path: "mock/unknown.csv",
     extract: false,
     icon: "M9.5 14.5L5 19m0 0h4m-4 0v-4M14.5 9.5L19 5m0 0h-4m4 0v4",
   },
   {
     label: "Stripe payments",
     desc: "Webhook events",
-    path: "/mock/payments.json",
+    path: "mock/payments.json",
     extract: false,
     icon: "M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z",
   },
   {
     label: "Slack thread",
     desc: "#sales-wins · plain chatter",
-    path: "/mock/slack.json",
+    path: "mock/slack.json",
     extract: true,
     icon: "M8 12a4 4 0 118 0 4 4 0 01-8 0zM3 21l2.6-2.6A9 9 0 1121 12a9 9 0 01-15.4 6.4L3 21z",
   },
   {
     label: "Email inbox",
     desc: "Deal confirmations in prose",
-    path: "/mock/emails.json",
+    path: "mock/emails.json",
     extract: true,
     icon: "M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z",
   },
@@ -59,17 +60,8 @@ export default function SourcePanel({ onDiscovered }: SourcePanelProps) {
     setPhase("discover");
     setError(null);
     try {
-      const res = await fetch("/api/discover-schema", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: raw }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? `Request failed (${res.status})`);
-        return;
-      }
-      onDiscovered(data as SourceProfile, raw);
+      const profile: SourceProfile = await discoverSchema(raw);
+      onDiscovered(profile, raw);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -85,19 +77,8 @@ export default function SourcePanel({ onDiscovered }: SourcePanelProps) {
     setPhase("extract");
     setError(null);
     try {
-      const res = await fetch("/api/extract-records", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: raw }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? `Extraction failed (${res.status})`);
-        setBusySource(null);
-        setPhase(null);
-        return;
-      }
-      const extracted = JSON.stringify((data as { records: SourceRecord[] }).records, null, 2);
+      const records = await extractRecords(raw);
+      const extracted = JSON.stringify(records, null, 2);
       setText(extracted);
       await discover(extracted, sourceKey, true);
     } catch (e) {

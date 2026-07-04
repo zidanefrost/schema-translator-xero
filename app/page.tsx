@@ -12,6 +12,7 @@ import Reveal from "@/components/Reveal";
 import Magnetic from "@/components/Magnetic";
 import SpotlightFX from "@/components/SpotlightFX";
 import { parseRecords } from "@/lib/parseSource";
+import { IS_STATIC, mapPayload } from "@/lib/api";
 import type { MappedPayload, Recipe, SourceProfile, SourceRecord } from "@/lib/contract";
 
 function now(): string {
@@ -140,17 +141,9 @@ export default function Home() {
     setFeed([]);
     try {
       for (let i = 0; i < records.length; i++) {
-        const res = await fetch("/api/map", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe, profile, record: records[i] }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setRunError(data.error ?? `Mapping failed on record ${i + 1} (${res.status})`);
-          break;
-        }
-        const payload = data as MappedPayload;
+        const payload: MappedPayload = await mapPayload(recipe, profile, records[i]);
+        // Small beat between rows so the feed visibly streams in.
+        if (IS_STATIC && i > 0) await new Promise((r) => setTimeout(r, 250));
         const status: SyncItem["status"] = payload.needs_confirmation ? "pending" : "synced";
         setFeed((prev) => [...prev, { id: `row-${i}`, payload, status }]);
         if (status === "synced") {
@@ -362,6 +355,11 @@ export default function Home() {
       <Marquee />
       <footer className="px-6 py-8 text-center font-mono text-[11px] uppercase tracking-[0.3em] text-slate-600">
         speaksync · any source → xero
+        {IS_STATIC && (
+          <span className="mt-2 block normal-case tracking-normal text-slate-700">
+            static demo — sample sources use canned AI responses; run locally for live LLM calls
+          </span>
+        )}
       </footer>
     </main>
   );
