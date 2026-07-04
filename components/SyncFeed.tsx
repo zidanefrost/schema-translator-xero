@@ -31,7 +31,7 @@ function ConfidenceBadge({ value }: { value: number }) {
           style={{ width: `${Math.round(value * 100)}%` }}
         />
       </span>
-      <span className={`font-mono text-[11px] ${confidenceText(value)}`}>
+      <span className={`font-mono text-[11px] tabular-nums ${confidenceText(value)}`}>
         <CountUp value={Math.round(value * 100)} />%
       </span>
     </span>

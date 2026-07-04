@@ -11,6 +11,16 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+::selection {
+  background: rgba(45, 212, 191, 0.28);
+  color: #f8fafc;
+}
+:focus-visible {
+  outline: 2px solid rgba(45, 212, 191, 0.65);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* --- Ambient backdrop: soft glows + dot grid ------------------------------- */
 .backdrop-glow {
   position: fixed;
@@ -93,6 +103,7 @@ body {
   border-top: 1px solid rgba(148, 163, 184, 0.12);
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(15, 23, 42, 0.4);
+  mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
 }
 .marquee-track {
   display: flex;
@@ -125,7 +136,7 @@ body {
 /* --- Glass cards + cursor spotlight ------------------------------------------- */
 .card {
   position: relative;
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.15);
   background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(12px);
@@ -268,6 +279,15 @@ body {
   transform: translateY(0);
 }
 
+/* hero scroll cue */
+@keyframes bounce-y {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+.scroll-cue {
+  animation: bounce-y 1.8s ease-in-out infinite;
+}
+
 /* subtle scrollbar for panels */
 .thin-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
 .thin-scroll::-webkit-scrollbar-thumb {
@@ -289,3 +309,4 @@ body {
     transition: none;
   }
 }
+

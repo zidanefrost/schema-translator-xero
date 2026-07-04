@@ -216,13 +216,13 @@ export default function Home() {
         <div className="blob blob-2" />
         <div className="blob blob-3" />
 
-        <p className="animate-fade-up mb-6 inline-block rounded-full border border-slate-800 bg-slate-900/60 px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.35em] text-slate-500">
+        <p className="animate-fade-up mb-6 inline-block rounded-full border border-slate-700/80 bg-slate-900/80 px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.35em] text-slate-400">
           xero hackathon · bounty 02
         </p>
         <h1 className="hero-title gradient-text animate-fade-up delay-1">SpeakSync</h1>
-        <p className="animate-fade-up delay-2 mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400">
-          Point at <span className="text-slate-200">any</span> business data. Say what should
-          happen in Xero. Watch it map itself — confidence-scored, human-checked.
+        <p className="animate-fade-up delay-2 mx-auto mt-7 max-w-xl text-lg leading-relaxed text-slate-300">
+          Point at <span className="font-semibold text-white">any</span> business data. Say what
+          should happen in Xero. Watch it map itself — confidence-scored, human-checked.
         </p>
         <div className="animate-fade-up delay-3 mt-10">
           <Magnetic strength={0.35}>
@@ -235,6 +235,12 @@ export default function Home() {
               Start building ↓
             </button>
           </Magnetic>
+        </div>
+
+        <div className="scroll-cue absolute bottom-8 left-1/2 -translate-x-1/2 text-slate-500">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </section>
 

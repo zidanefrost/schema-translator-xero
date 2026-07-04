@@ -28,7 +28,13 @@ export default function Reveal({
       { threshold: 0.15 },
     );
     ob.observe(el);
-    return () => ob.disconnect();
+    // Safety net: never leave content hidden if the observer misses
+    // (anchor jumps, odd scroll restoration, exotic browsers).
+    const fallback = setTimeout(() => setVisible(true), 1500);
+    return () => {
+      ob.disconnect();
+      clearTimeout(fallback);
+    };
   }, []);
 
   return (
