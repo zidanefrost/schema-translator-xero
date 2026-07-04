@@ -60,7 +60,7 @@ app/
   api/
     compile-intent/route.ts    # Intent Compiler  — English → Recipe (LLM)
     discover-schema/route.ts   # Schema Discovery — raw payload → SourceProfile (LLM)
-    map/route.ts               # MOCK Mapping Engine (Dev A's slice — see below)
+    map/route.ts               # MOCK Mapping Engine (see below)
 components/
   DescribeBox.tsx              # plain-English input → recipe
   SourcePanel.tsx              # sample tiles + paste/upload → discovery
@@ -79,16 +79,16 @@ public/mock/
   payments.json                # Stripe-shaped payment events
 ```
 
-## The integration contract (two-dev split)
+## The integration contract
 
-This repo is the **Dev B slice**: everything except real writes to Xero. The **Mapping Engine + Xero Executor (Dev A)** is mocked by `app/api/map/route.ts`, which fuzzy-matches contacts, parses currency/dates, and assigns confidence heuristically.
+Everything that writes to Xero sits behind a single boundary. The **Mapping Engine + Xero Executor** is currently mocked by `app/api/map/route.ts`, which fuzzy-matches contacts, parses currency/dates, and assigns confidence heuristically.
 
 The boundary is [`lib/contract.ts`](lib/contract.ts):
 
-- Dev B **produces** `Recipe` and `SourceProfile`, and posts `{ recipe, profile, record }` per row.
-- Dev B **renders** the returned `MappedPayload` (fields, confidences, rationales, contact match, `needs_confirmation`).
+- The app **produces** `Recipe` and `SourceProfile`, and posts `{ recipe, profile, record }` per row.
+- The app **renders** the returned `MappedPayload` (fields, confidences, rationales, contact match, `needs_confirmation`).
 
-**Swapping in the real engine is a one-line change**: point the `/api/map` call at Dev A's endpoint. Request and response shapes stay identical; nothing in the UI assumes the mapper is local. Field names in `contract.ts` must not change without both devs agreeing.
+**Swapping in the real engine is a one-line change**: point the `/api/map` call at the real endpoint. Request and response shapes stay identical; nothing in the UI assumes the mapper is local. Field names in `contract.ts` are the shared contract and shouldn't change casually.
 
 ## Design notes
 
