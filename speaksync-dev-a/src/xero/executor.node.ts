@@ -93,11 +93,15 @@ export const nodeExecutor: Executor = {
           type: "ACCREC" as any,
           contact: { contactID: contactId },
           date: input.date,
+          dueDate: input.dueDate,
           status: input.status as any,
+          invoiceNumber: input.invoiceNumber,
+          reference: input.reference,
           lineItems: input.lineItems.map((li) => ({
             description: li.description,
             quantity: li.quantity,
             unitAmount: li.unitAmount,
+            accountCode: li.accountCode,
           })),
         },
       ],
@@ -113,6 +117,40 @@ export const nodeExecutor: Executor = {
       deepLink: deepLinkForInvoice(invoice.invoiceID),
       status: String(invoice.status ?? input.status),
     };
+  },
+
+  async findInvoiceByNumber(
+    invoiceNumber: string,
+  ): Promise<{ invoiceId: string; status: string; amountDue: number } | null> {
+    const { client, tenantId } = await getXero();
+    const res = await client.accountingApi.getInvoices(
+      tenantId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [invoiceNumber],
+    );
+    const inv = res.body.invoices?.[0];
+    if (!inv?.invoiceID) return null;
+    return {
+      invoiceId: inv.invoiceID,
+      status: String(inv.status ?? ""),
+      amountDue: Number(inv.amountDue ?? 0),
+    };
+  },
+
+  async getDefaultPaymentAccountCode(): Promise<string> {
+    const { client, tenantId } = await getXero();
+    try {
+      const res = await client.accountingApi.getAccounts(tenantId, undefined, 'Type=="BANK"');
+      const code = res.body.accounts?.find((a) => a.code)?.code;
+      if (code) return code;
+    } catch {
+      // Custom Connection may lack accounting.settings.read - fall through.
+    }
+    // 090 = Business Bank Account in the Xero Demo Company chart.
+    return process.env.XERO_PAYMENT_ACCOUNT_CODE ?? "090";
   },
 
   async createPayment(input: CreatePaymentInput): Promise<ExecResult> {

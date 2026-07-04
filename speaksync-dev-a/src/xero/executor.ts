@@ -9,10 +9,14 @@ export interface CreateInvoiceInput {
   contactName: string; // used if creating a new contact
   status: "DRAFT" | "AUTHORISED";
   date: string; // YYYY-MM-DD
+  dueDate?: string; // required by Xero for AUTHORISED invoices
+  invoiceNumber?: string; // e.g. INV-0042 (used by the payment-demo seed)
+  reference?: string;
   lineItems: Array<{
     description: string;
     quantity: number;
     unitAmount: number;
+    accountCode?: string; // required by Xero for AUTHORISED invoices
   }>;
 }
 
@@ -42,4 +46,8 @@ export interface Executor {
   createContact(name: string, email?: string): Promise<XeroContact>;
   createInvoice(input: CreateInvoiceInput): Promise<ExecResult>;
   createPayment(input: CreatePaymentInput): Promise<ExecResult>;
+  findInvoiceByNumber(
+    invoiceNumber: string,
+  ): Promise<{ invoiceId: string; status: string; amountDue: number } | null>;
+  getDefaultPaymentAccountCode(): Promise<string>;
 }

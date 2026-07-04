@@ -6,7 +6,7 @@
     "customer_email": "ap@acme.example",
     "amount_paid": "1200.00",
     "currency": "gbp",
-    "invoice_ref": "INV-0042",
+    "invoice_ref": "INV-1042",
     "paid_at": "2026-07-04T09:12:33Z"
   },
   {
@@ -16,7 +16,7 @@
     "customer_email": "billing@globex.example",
     "amount_paid": "£900.00",
     "currency": "gbp",
-    "invoice_ref": "INV-0043",
+    "invoice_ref": "INV-1043",
     "paid_at": "2026-07-04T11:47:05Z"
   },
   {

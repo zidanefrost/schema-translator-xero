@@ -16,10 +16,14 @@ export interface CreateInvoiceInput {
   contactName: string; // used if creating a new contact
   status: "DRAFT" | "AUTHORISED";
   date: string; // YYYY-MM-DD
+  dueDate?: string; // required by Xero for AUTHORISED invoices
+  invoiceNumber?: string; // e.g. INV-0042 (used by the payment-demo seed)
+  reference?: string;
   lineItems: Array<{
     description: string;
     quantity: number;
     unitAmount: number;
+    accountCode?: string; // required by Xero for AUTHORISED invoices
   }>;
 }
 
@@ -97,6 +101,42 @@ export const nodeExecutor = {
     return { contactId: created.contactID, name: created.name ?? name, emailAddress: email };
   },
 
+  /** Find an invoice by its InvoiceNumber (e.g. "INV-0043"). */
+  async findInvoiceByNumber(
+    invoiceNumber: string,
+  ): Promise<{ invoiceId: string; status: string; amountDue: number } | null> {
+    const { client, tenantId } = await getXero();
+    const res = await client.accountingApi.getInvoices(
+      tenantId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [invoiceNumber],
+    );
+    const inv = res.body.invoices?.[0];
+    if (!inv?.invoiceID) return null;
+    return {
+      invoiceId: inv.invoiceID,
+      status: String(inv.status ?? ""),
+      amountDue: Number(inv.amountDue ?? 0),
+    };
+  },
+
+  /** First bank account code in the org — the default target for payments. */
+  async getDefaultPaymentAccountCode(): Promise<string> {
+    const { client, tenantId } = await getXero();
+    try {
+      const res = await client.accountingApi.getAccounts(tenantId, undefined, 'Type=="BANK"');
+      const code = res.body.accounts?.find((a) => a.code)?.code;
+      if (code) return code;
+    } catch {
+      // Custom Connection may lack accounting.settings.read - fall through.
+    }
+    // 090 = Business Bank Account in the Xero Demo Company chart.
+    return process.env.XERO_PAYMENT_ACCOUNT_CODE ?? "090";
+  },
+
   async createInvoice(input: CreateInvoiceInput): Promise<ExecResult> {
     const { client, tenantId } = await getXero();
 
@@ -113,12 +153,16 @@ export const nodeExecutor = {
           type: "ACCREC" as any,
           contact: { contactID: contactId },
           date: input.date,
+          dueDate: input.dueDate,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           status: input.status as any,
+          invoiceNumber: input.invoiceNumber,
+          reference: input.reference,
           lineItems: input.lineItems.map((li) => ({
             description: li.description,
             quantity: li.quantity,
             unitAmount: li.unitAmount,
+            accountCode: li.accountCode,
           })),
         },
       ],

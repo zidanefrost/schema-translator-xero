@@ -49,13 +49,36 @@ export async function executeMappedPayload(payload: MappedPayload): Promise<Exec
   }
 
   if (payload.action === "create_payment") {
-    const invoiceId = String(getField(payload, "Invoice.InvoiceID", "Invoice", "InvoiceID") ?? "");
-    const accountCode = String(getField(payload, "Account.Code", "Account", "AccountCode") ?? "");
+    const invoiceRef = String(getField(payload, "Invoice.InvoiceID", "Invoice", "InvoiceID", "InvoiceNumber") ?? "");
+    let accountCode = String(getField(payload, "Account.Code", "Account", "AccountCode") ?? "");
     const amount = Number(getField(payload, "Amount", "LineItem.Amount") ?? 0);
     const date = (getField(payload, "Date") as string) ?? todayISO();
 
-    if (!invoiceId) {
-      throw new Error("create_payment requires Invoice.InvoiceID");
+    if (!invoiceRef) {
+      throw new Error("create_payment requires an invoice reference");
+    }
+
+    // The mapper usually emits an invoice NUMBER (e.g. "INV-0043"), not a
+    // Xero GUID — resolve it. Payments only apply to AUTHORISED invoices.
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(invoiceRef);
+    let invoiceId = invoiceRef;
+    if (!isGuid) {
+      const found = await nodeExecutor.findInvoiceByNumber(invoiceRef);
+      if (!found) {
+        throw new Error(`No invoice found in Xero with number "${invoiceRef}"`);
+      }
+      if (found.status !== "AUTHORISED") {
+        throw new Error(
+          `Invoice ${invoiceRef} is ${found.status} — Xero only accepts payments against AUTHORISED invoices`,
+        );
+      }
+      invoiceId = found.invoiceId;
+    }
+
+    // "Stripe Clearing" etc. aren't real account codes — resolve to the
+    // org's first bank account when the mapped code isn't numeric-ish.
+    if (!/^\d{2,4}$/.test(accountCode)) {
+      accountCode = await nodeExecutor.getDefaultPaymentAccountCode();
     }
 
     const exec = await nodeExecutor.createPayment({ invoiceId, accountCode, amount, date });

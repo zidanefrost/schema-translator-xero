@@ -85,7 +85,7 @@ const PAYMENTS_PROFILE: SourceProfile = {
     { name: "customer_email", type: "string", semantic: "customer email", sample: "ap@acme.example" },
     { name: "amount_paid", type: "string", semantic: "payment amount, inconsistently formatted", sample: "1200.00" },
     { name: "currency", type: "string", semantic: "ISO currency code", sample: "gbp" },
-    { name: "invoice_ref", type: "string", semantic: "invoice reference — sometimes missing", sample: "INV-0042" },
+    { name: "invoice_ref", type: "string", semantic: "invoice reference — sometimes missing", sample: "INV-1042" },
     { name: "paid_at", type: "date", semantic: "payment timestamp", sample: "2026-07-04T09:12:33Z" },
   ],
 };
