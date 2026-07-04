@@ -52,6 +52,15 @@ Open [http://localhost:3000](http://localhost:3000). You need an [Anthropic API 
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | LLM calls (server-side route handlers only) | — required |
 | `SPEAKSYNC_MODEL` | Override the Claude model | `claude-sonnet-5` |
+| `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` | Custom Connection creds — enables REAL Xero writes in-process | optional |
+| `DEV_A_BASE_URL` | Point at the standalone Dev A service instead (takes priority) | optional |
+
+## Live deployments
+
+- **https://schema-translator-xero.vercel.app** — the real app (live LLM compile/discover/extract). Xero writes activate once `XERO_CLIENT_ID`/`SECRET` (or `DEV_A_BASE_URL`) are set in Vercel.
+- **https://zidanefrost.github.io/schema-translator-xero/** — zero-backend static demo with canned AI responses.
+
+Without Xero credentials the app degrades honestly: rows sync as "simulated" with no fake links. With them, every synced row shows **View in Xero ↗** to the real draft invoice. Seed the Demo Company first: `cd speaksync-dev-a && npx tsx scripts/seed-contacts.ts` (idempotent; rerun after the Demo Company's ~28-day reset).
 
 ## Project structure
 
@@ -62,7 +71,9 @@ app/
     compile-intent/route.ts    # Intent Compiler  — English → Recipe (LLM)
     discover-schema/route.ts   # Schema Discovery — raw payload → SourceProfile (LLM)
     extract-records/route.ts   # Extraction — Slack/email prose → structured records (LLM)
-    map/route.ts               # MOCK Mapping Engine (see below)
+    map/route.ts               # Mapping Engine: Dev A proxy → in-process real → mock
+    execute/route.ts           # Xero writes: Dev A proxy → in-process xero-node → simulated
+lib/xeroReal/                  # the REAL engine + executor (Claude mapping, xero-node)
 components/
   DescribeBox.tsx              # plain-English input → recipe
   SourcePanel.tsx              # sample tiles + paste/upload → discovery
