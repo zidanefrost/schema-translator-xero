@@ -1,0 +1,32 @@
+[
+  {
+    "event": "payment_intent.succeeded",
+    "payment_id": "pi_3RkT2wLq9x",
+    "customer_name": "Acme Limited",
+    "customer_email": "ap@acme.example",
+    "amount_paid": "1200.00",
+    "currency": "gbp",
+    "invoice_ref": "INV-0042",
+    "paid_at": "2026-07-04T09:12:33Z"
+  },
+  {
+    "event": "payment_intent.succeeded",
+    "payment_id": "pi_3RkU8mNp2y",
+    "customer_name": "globex trading",
+    "customer_email": "billing@globex.example",
+    "amount_paid": "£900.00",
+    "currency": "gbp",
+    "invoice_ref": "INV-0043",
+    "paid_at": "2026-07-04T11:47:05Z"
+  },
+  {
+    "event": "payment_intent.succeeded",
+    "payment_id": "pi_3RkV1cQr7z",
+    "customer_name": "Initech Ltd",
+    "customer_email": "accounts@initech.example",
+    "amount_paid": "450.00",
+    "currency": "gbp",
+    "invoice_ref": "",
+    "paid_at": "2026-07-05T08:03:19Z"
+  }
+]

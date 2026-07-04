@@ -1,0 +1,23 @@
+[
+  {
+    "from": "dave@acme.example",
+    "to": "sales@ourco.example",
+    "subject": "Re: Q3 consulting engagement",
+    "date": "Fri, 4 Jul 2026 09:15:00 +0100",
+    "body": "Hi team,\n\nConfirming we're good to proceed with the Q3 consulting work as agreed — £1,200.00 all in. Please invoice Acme Ltd the usual way (ap@acme.example).\n\nCheers,\nDave"
+  },
+  {
+    "from": "no-reply@globex.example",
+    "to": "sales@ourco.example",
+    "subject": "PO approved: Support retainer top-up",
+    "date": "Fri, 4 Jul 2026 14:02:11 +0100",
+    "body": "Purchase order REF-2291 has been approved.\n\nVendor: GLOBEX Trading\nItem: Support retainer top-up\nValue: £900.00\nEffective: 04/07/2026\n\nThis is an automated message."
+  },
+  {
+    "from": "office@initech.example",
+    "to": "sales@ourco.example",
+    "subject": "onboarding invoice?",
+    "date": "Sun, 6 Jul 2026 19:44:37 +0100",
+    "body": "hey — quick one, we never got the invoice for the onboarding session (the 450 one, completed 1st July). can you send it over to accounts@initech.example when you get a sec? thanks!"
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "customer": "Acme Limited",
+    "email": "ap@acme.example",
+    "amount": 3200,
+    "close_date": "2026-06-28",
+    "deal_name": "Website rebuild",
+    "notes": "PO-4471",
+    "stage": "closed_won"
+  },
+  {
+    "customer": "Globex Trading",
+    "email": "billing@globex.example",
+    "amount": 1500,
+    "close_date": "2026-06-30",
+    "deal_name": "Q3 support retainer",
+    "notes": "SO-1188",
+    "stage": "closed_won"
+  },
+  {
+    "customer": "acme ltd",
+    "email": "ap@acme.example",
+    "amount": "£1,200.00",
+    "close_date": "04/07/2026",
+    "deal_name": "Q3 consulting",
+    "notes": "consulting services as agreed w/ Dave",
+    "stage": "closed_won"
+  },
+  {
+    "customer": "GLOBEX trading",
+    "email": "",
+    "amount": "£900.00",
+    "close_date": "Jul 4 2026",
+    "deal_name": "Support retainer top-up",
+    "notes": "REF-2291",
+    "stage": "closed_won"
+  },
+  {
+    "customer": "initech",
+    "email": "accounts@initech.example",
+    "amount": 450,
+    "close_date": "2026-07-01",
+    "deal_name": "Onboarding",
+    "notes": "",
+    "stage": "won"
+  }
+]

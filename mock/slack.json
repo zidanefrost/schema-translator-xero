@@ -1,0 +1,25 @@
+{
+  "channel": "#sales-wins",
+  "messages": [
+    {
+      "user": "dana",
+      "ts": "1783245093.000200",
+      "text": "closed Acme!! 🎉 £3,200 for the website rebuild, close date 28 June. invoice goes to ap@acme.example — PO-4471"
+    },
+    {
+      "user": "marcus",
+      "ts": "1783260112.000400",
+      "text": "nice one 👏 Globex also renewed their Q3 support retainer today — 1,500 GBP, billing@globex.example, ref SO-1188"
+    },
+    {
+      "user": "priya",
+      "ts": "1783271455.000700",
+      "text": "reminder: standup moved to 10am tomorrow"
+    },
+    {
+      "user": "dana",
+      "ts": "1783291800.000100",
+      "text": "oh and initech onboarding wrapped up, 450 quid. invoice accounts@initech.example… i think the close date was july 1st?"
+    }
+  ]
+}
