@@ -1,0 +1,9 @@
+{
+  "detected_format": "csv",
+  "fields": [
+    { "name": "cust_nm", "type": "string", "semantic": "customer name", "sample": "acme ltd" },
+    { "name": "amt_gbp", "type": "string", "semantic": "amount in GBP", "sample": "£1,200.00" },
+    { "name": "dt_closed", "type": "string", "semantic": "deal close date", "sample": "04/07/2026" },
+    { "name": "notes", "type": "string", "semantic": "free-text deal notes / line description", "sample": "Q3 consulting retainer" }
+  ]
+}

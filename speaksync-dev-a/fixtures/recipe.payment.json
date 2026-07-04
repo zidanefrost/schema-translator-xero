@@ -1,0 +1,8 @@
+{
+  "name": "Stripe payment to matched invoice",
+  "trigger": { "source": "stripe", "event": "payment_succeeded" },
+  "target": { "system": "xero", "action": "create_payment" },
+  "intent": "When a Stripe payment succeeds, record it against the matching invoice",
+  "entity_resolution": { "entity": "invoice", "match_on": "reference" },
+  "guardrails": { "confirm_below_confidence": 0.8 }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "cust_nm": "bayside club",
+    "amt_gbp": "1,200",
+    "dt_closed": "04/07/2026",
+    "notes": ""
+  },
+  {
+    "cust_nm": "City Agency Ltd.",
+    "amt_gbp": "£85.5",
+    "dt_closed": "Jul 4 2026",
+    "notes": "final invoice — see thread"
+  },
+  {
+    "cust_nm": "Brand New Customer Co",
+    "amt_gbp": "£2,000.00",
+    "dt_closed": "2026-07-04",
+    "notes": "new client, no prior record in Xero"
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "action": "create_invoice",
+  "fields": [
+    { "name": "Status", "value": "DRAFT", "source_field": null, "confidence": 1, "rationale": "guardrail" },
+    { "name": "Date", "value": "2026-07-04", "source_field": null, "confidence": 1, "rationale": "test" },
+    { "name": "LineItem.Description", "value": "Alias test - website audit", "source_field": "notes", "confidence": 0.9, "rationale": "Dev B mock naming" },
+    { "name": "LineItem.Amount", "value": 920, "source_field": "amt_gbp", "confidence": 0.9, "rationale": "Dev B mock naming" }
+  ],
+  "contact": {
+    "match": "existing",
+    "contact_id": "717a29af-ccc1-43d2-a161-4d10c72d3cb5",
+    "name": "RITE Agency",
+    "confidence": 1
+  },
+  "overall_confidence": 0.95,
+  "needs_confirmation": false
+}

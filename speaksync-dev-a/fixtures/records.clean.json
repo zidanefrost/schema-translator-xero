@@ -1,0 +1,14 @@
+[
+  {
+    "cust_nm": "Bayside Club",
+    "amt_gbp": "£450.00",
+    "dt_closed": "2026-07-01",
+    "notes": "Monthly membership consulting"
+  },
+  {
+    "cust_nm": "City Agency",
+    "amt_gbp": "£920.00",
+    "dt_closed": "2026-07-02",
+    "notes": "Website audit"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "name": "Closed deal to draft invoice",
+  "trigger": { "source": "crm", "event": "deal_closed" },
+  "target": { "system": "xero", "action": "create_invoice" },
+  "intent": "For each closed deal, create a draft invoice in Xero",
+  "entity_resolution": { "entity": "customer", "match_on": "name" },
+  "guardrails": { "invoice_status": "DRAFT", "confirm_below_confidence": 0.8 }
+}

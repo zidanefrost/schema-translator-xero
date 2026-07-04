@@ -1,0 +1,18 @@
+{
+  "action": "create_invoice",
+  "fields": [
+    { "name": "Status", "value": "DRAFT", "source_field": null, "confidence": 1, "rationale": "Guardrail forces DRAFT" },
+    { "name": "Date", "value": "2026-07-04", "source_field": null, "confidence": 1, "rationale": "Test date" },
+    { "name": "LineItems.Description", "value": "Kitchen refit deposit (test invoice)", "source_field": null, "confidence": 0.9, "rationale": "From test message" },
+    { "name": "LineItems.Quantity", "value": 1, "source_field": null, "confidence": 1, "rationale": "Single job" },
+    { "name": "LineItems.UnitAmount", "value": 500, "source_field": null, "confidence": 0.9, "rationale": "Parsed 500 quid" }
+  ],
+  "contact": {
+    "match": "existing",
+    "contact_id": "c17fe705-e79e-4824-8944-b1026529926b",
+    "name": "Luna Cafe",
+    "confidence": 1
+  },
+  "overall_confidence": 0.95,
+  "needs_confirmation": false
+}

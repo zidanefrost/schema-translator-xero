@@ -1,0 +1,8 @@
+{
+  "name": "Slack message to draft invoice",
+  "trigger": { "source": "slack", "event": "message" },
+  "target": { "system": "xero", "action": "create_invoice" },
+  "intent": "Create a draft invoice from a free-text message describing a completed job and payment",
+  "entity_resolution": { "entity": "customer", "match_on": "name" },
+  "guardrails": { "invoice_status": "DRAFT", "confirm_below_confidence": 0.8 }
+}
