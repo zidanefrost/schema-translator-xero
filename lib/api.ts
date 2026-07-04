@@ -49,3 +49,20 @@ export async function mapPayload(
   if (IS_STATIC) return mapRecord(recipe, profile, record);
   return post<MappedPayload>("/api/map", { recipe, profile, record });
 }
+
+// Result of a real Xero write via Dev A's Executor.
+export interface ExecuteResult {
+  id: string;
+  deep_link: string;
+  status: string;
+}
+
+// Write a (possibly human-edited) MappedPayload to Xero via Dev A.
+// Call this when a row auto-syncs or after the user accepts a ConfirmCard.
+// In the static build there is no backend, so this is a no-op stub.
+export async function executePayload(payload: MappedPayload): Promise<ExecuteResult> {
+  if (IS_STATIC) {
+    return { id: "static-demo", deep_link: "#", status: "DRAFT" };
+  }
+  return post<ExecuteResult>("/api/execute", payload);
+}
