@@ -5,14 +5,14 @@ import DescribeBox from "@/components/DescribeBox";
 import RecipePanel from "@/components/RecipePanel";
 import SourcePanel from "@/components/SourcePanel";
 import ProfilePanel from "@/components/ProfilePanel";
-import SyncFeed, { type SyncItem } from "@/components/SyncFeed";
+import SyncFeed, { type SyncItem, type ExecuteState } from "@/components/SyncFeed";
 import AuditLog, { type AuditEntry } from "@/components/AuditLog";
 import Marquee from "@/components/Marquee";
 import Reveal from "@/components/Reveal";
 import Magnetic from "@/components/Magnetic";
 import SpotlightFX from "@/components/SpotlightFX";
 import { parseRecords } from "@/lib/parseSource";
-import { IS_STATIC, mapPayload } from "@/lib/api";
+import { IS_STATIC, mapPayload, executePayload, ExecutorUnavailableError } from "@/lib/api";
 import type { MappedPayload, Recipe, SourceProfile, SourceRecord } from "@/lib/contract";
 
 function now(): string {
@@ -101,6 +101,7 @@ export default function Home() {
   const [feed, setFeed] = useState<SyncItem[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [watching, setWatching] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [openRecipe, setOpenRecipe] = useState(false);
   const [openSource, setOpenSource] = useState(false);
@@ -108,10 +109,20 @@ export default function Home() {
   const step2Ref = useRef<HTMLDivElement>(null);
   const step3Ref = useRef<HTMLDivElement>(null);
 
+  // Once we learn no Xero executor is configured, stop trying: every row
+  // becomes a clearly-labelled simulated sync instead of an error.
+  const simulatedRef = useRef(IS_STATIC);
+  // Mappings the human has confirmed this session:
+  // "action|fieldName|sourceField" -> auto-apply next time.
+  const learnedRef = useRef<Set<string>>(new Set());
+  const watchCounter = useRef(0);
+  const watchIndex = useRef(0);
+
   const threshold = recipe?.guardrails?.confirm_below_confidence ?? 0.8;
   const canRun = recipe !== null && profile !== null && records.length > 0 && !running;
   const syncedCount = feed.filter((i) => i.status === "synced").length;
   const pendingCount = feed.filter((i) => i.status === "pending").length;
+  const inXeroCount = feed.filter((i) => i.execute?.state === "done").length;
 
   // Glide to the next step as each one completes.
   useEffect(() => {
@@ -127,11 +138,87 @@ export default function Home() {
     }
   }, [profile]);
 
-  function logAudit(kind: AuditEntry["kind"], text: string) {
+  function logAudit(kind: AuditEntry["kind"], text: string, link?: string) {
     setAudit((prev) => [
       ...prev,
-      { id: `audit-${Date.now()}-${prev.length}`, time: now(), kind, text },
+      { id: `audit-${Date.now()}-${prev.length}`, time: now(), kind, text, link },
     ]);
+  }
+
+  function learnedKey(action: string, fieldName: string, sourceField: string | null): string {
+    return `${action}|${fieldName}|${sourceField ?? ""}`;
+  }
+
+  /** Boost fields the human already confirmed this session. */
+  function applyLearned(payload: MappedPayload): MappedPayload {
+    let changed = false;
+    const fields = payload.fields.map((f) => {
+      if (
+        f.confidence < threshold &&
+        learnedRef.current.has(learnedKey(payload.action, f.name, f.source_field))
+      ) {
+        changed = true;
+        return {
+          ...f,
+          confidence: 0.96,
+          rationale: "Auto-applied — you confirmed this mapping earlier this session.",
+        };
+      }
+      return f;
+    });
+    if (!changed) return payload;
+    const overall =
+      Math.round((fields.reduce((s, f) => s + f.confidence, 0) / fields.length) * 100) / 100;
+    return {
+      ...payload,
+      fields,
+      overall_confidence: overall,
+      needs_confirmation:
+        fields.some((f) => f.confidence < threshold) || payload.contact.confidence < threshold,
+    };
+  }
+
+  function markExecute(id: string, execute: ExecuteState) {
+    setFeed((prev) => prev.map((it) => (it.id === id ? { ...it, execute } : it)));
+  }
+
+  /** Write a synced row to Xero (or degrade to a labelled simulation). */
+  async function executeRow(id: string, payload: MappedPayload, kind: AuditEntry["kind"]) {
+    const who = payload.contact.name;
+    if (simulatedRef.current) {
+      markExecute(id, { state: "simulated" });
+      logAudit(kind, `Synced ${payload.action} for ${who} (simulated — no Xero executor).`);
+      return;
+    }
+    try {
+      const result = await executePayload(payload);
+      markExecute(id, { state: "done", deepLink: result.deep_link, xeroStatus: result.status });
+      logAudit(kind, `Created ${payload.action} in Xero for ${who} (${result.status}).`, result.deep_link);
+    } catch (e) {
+      if (e instanceof ExecutorUnavailableError) {
+        simulatedRef.current = true;
+        markExecute(id, { state: "simulated" });
+        logAudit(kind, `Synced ${payload.action} for ${who} (simulated — no Xero executor configured).`);
+      } else {
+        const msg = e instanceof Error ? e.message : String(e);
+        markExecute(id, { state: "failed", error: msg });
+        logAudit(kind, `Xero write FAILED for ${who}: ${msg}`);
+      }
+    }
+  }
+
+  /** Map one record, add it to the feed, and execute it if it clears the bar. */
+  async function processRecord(record: SourceRecord, id: string): Promise<void> {
+    const raw = await mapPayload(recipe, profile, record);
+    const payload = applyLearned(raw);
+    const status: SyncItem["status"] = payload.needs_confirmation ? "pending" : "synced";
+    setFeed((prev) => [
+      ...prev,
+      { id, payload, status, execute: status === "synced" ? { state: "writing" } : undefined },
+    ]);
+    if (status === "synced") {
+      await executeRow(id, payload, "auto");
+    }
   }
 
   async function run() {
@@ -141,19 +228,8 @@ export default function Home() {
     setFeed([]);
     try {
       for (let i = 0; i < records.length; i++) {
-        const payload: MappedPayload = await mapPayload(recipe, profile, records[i]);
-        // Small beat between rows so the feed visibly streams in.
-        if (IS_STATIC && i > 0) await new Promise((r) => setTimeout(r, 250));
-        const status: SyncItem["status"] = payload.needs_confirmation ? "pending" : "synced";
-        setFeed((prev) => [...prev, { id: `row-${i}`, payload, status }]);
-        if (status === "synced") {
-          logAudit(
-            "auto",
-            `Auto-synced ${payload.action} for ${payload.contact.name} at ${Math.round(
-              payload.overall_confidence * 100,
-            )}% confidence.`,
-          );
-        }
+        await processRecord(records[i], `row-${i}`);
+        if (IS_STATIC && i < records.length - 1) await new Promise((r) => setTimeout(r, 250));
       }
     } catch (e) {
       setRunError(e instanceof Error ? e.message : String(e));
@@ -162,38 +238,55 @@ export default function Home() {
     }
   }
 
+  // Watch mode: simulate live events arriving from the source.
+  useEffect(() => {
+    if (!watching || !recipe || !profile || records.length === 0) return;
+    const t = setInterval(() => {
+      const record = records[watchIndex.current % records.length];
+      watchIndex.current += 1;
+      const id = `watch-${watchCounter.current++}`;
+      processRecord(record, id).catch(() => {});
+    }, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watching, recipe, profile, records]);
+
   function confirmItem(id: string, edits: { name: string; value: string }[]) {
-    setFeed((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const editMap = new Map(edits.map((e) => [e.name, e.value]));
-        const fields = item.payload.fields.map((f) =>
-          editMap.has(f.name)
-            ? {
-                ...f,
-                value: editMap.get(f.name) || null,
-                confidence: 1,
-                rationale: "Confirmed by user.",
-              }
-            : f,
-        );
-        const overall =
-          Math.round((fields.reduce((s, f) => s + f.confidence, 0) / fields.length) * 100) / 100;
-        const payload: MappedPayload = {
-          ...item.payload,
-          fields,
-          overall_confidence: overall,
-          needs_confirmation: false,
-        };
-        logAudit(
-          "confirmed",
-          `User confirmed ${edits
-            .map((e) => `${e.name} = "${e.value || "(blank)"}"`)
-            .join(", ")} — ${payload.action} for ${payload.contact.name} synced.`,
-        );
-        return { ...item, payload, status: "synced" as const };
-      }),
+    const item = feed.find((it) => it.id === id);
+    if (!item) return;
+
+    const editMap = new Map(edits.map((e) => [e.name, e.value]));
+    const fields = item.payload.fields.map((f) => {
+      if (!editMap.has(f.name)) return f;
+      const newValue = editMap.get(f.name) || null;
+      // Accepting the mapped value as-is teaches the system this mapping
+      // is fine; an edited value fixes this row without generalising.
+      if (String(f.value ?? "") === String(newValue ?? "")) {
+        learnedRef.current.add(learnedKey(item.payload.action, f.name, f.source_field));
+      }
+      return { ...f, value: newValue, confidence: 1, rationale: "Confirmed by user." };
+    });
+    const overall =
+      Math.round((fields.reduce((s, f) => s + f.confidence, 0) / fields.length) * 100) / 100;
+    const payload: MappedPayload = {
+      ...item.payload,
+      fields,
+      overall_confidence: overall,
+      needs_confirmation: false,
+    };
+
+    logAudit(
+      "confirmed",
+      `User confirmed ${edits
+        .map((e) => `${e.name} = "${e.value || "(blank)"}"`)
+        .join(", ")} — ${payload.action} for ${payload.contact.name}.`,
     );
+    setFeed((prev) =>
+      prev.map((it) =>
+        it.id === id ? { ...it, payload, status: "synced" as const, execute: { state: "writing" as const } } : it,
+      ),
+    );
+    void executeRow(id, payload, "confirmed");
   }
 
   return (
@@ -264,6 +357,7 @@ export default function Home() {
                   setRecipe(r);
                   setOpenRecipe(false);
                   setFeed([]);
+                  setWatching(false);
                 }}
               />
               {recipe && <RecipePanel recipe={recipe} />}
@@ -297,6 +391,7 @@ export default function Home() {
                     setProfile(p);
                     setRecords(parseRecords(raw));
                     setFeed([]);
+                    setWatching(false);
                     setOpenSource(false);
                   }}
                 />
@@ -330,9 +425,27 @@ export default function Home() {
                       )}
                     </button>
                   </Magnetic>
+                  <button
+                    onClick={() => setWatching((v) => !v)}
+                    disabled={!recipe || !profile || records.length === 0}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-30 ${
+                      watching
+                        ? "border-red-500/60 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                        : "border-slate-700 text-slate-300 hover:border-teal-500/60 hover:text-teal-300"
+                    }`}
+                  >
+                    {watching ? "◼ Stop watching" : "▶ Watch source"}
+                  </button>
+                  {watching && (
+                    <span className="flex items-center gap-1.5 font-mono text-xs text-teal-300">
+                      <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-teal-400" />
+                      live — syncing new events as they arrive
+                    </span>
+                  )}
                   {feed.length > 0 && (
                     <div className="flex items-center gap-2">
                       <Chip tone="teal">{syncedCount} synced</Chip>
+                      {inXeroCount > 0 && <Chip tone="purple">{inXeroCount} in Xero</Chip>}
                       {pendingCount > 0 && (
                         <span className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 font-mono text-xs text-amber-300">
                           <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-amber-400" />

@@ -4,10 +4,18 @@ import type { MappedPayload } from "@/lib/contract";
 import ConfirmCard from "@/components/ConfirmCard";
 import CountUp from "@/components/CountUp";
 
+export interface ExecuteState {
+  state: "writing" | "done" | "failed" | "simulated";
+  deepLink?: string;
+  xeroStatus?: string;
+  error?: string;
+}
+
 export interface SyncItem {
   id: string;
   payload: MappedPayload;
   status: "synced" | "pending";
+  execute?: ExecuteState;
 }
 
 export function confidenceColor(c: number): string {
@@ -75,16 +83,43 @@ export default function SyncFeed({ items, threshold, onConfirm }: SyncFeedProps)
               </span>
               <span
                 className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs ${
-                  status === "synced"
-                    ? "badge-pop border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                    : "border border-amber-500/40 bg-amber-500/10 text-amber-300"
+                  status === "pending"
+                    ? "border border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    : item.execute?.state === "failed"
+                      ? "border border-red-500/40 bg-red-500/10 text-red-300"
+                      : "badge-pop border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
                 }`}
               >
-                {status === "pending" && (
+                {(status === "pending" || item.execute?.state === "writing") && (
                   <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-amber-400" />
                 )}
-                {status === "synced" ? "✓ synced" : "awaiting confirmation"}
+                {status === "pending"
+                  ? "awaiting confirmation"
+                  : item.execute?.state === "writing"
+                    ? "writing to Xero…"
+                    : item.execute?.state === "done"
+                      ? `✓ in Xero · ${item.execute.xeroStatus ?? "DRAFT"}`
+                      : item.execute?.state === "failed"
+                        ? "✕ Xero write failed"
+                        : item.execute?.state === "simulated"
+                          ? "✓ synced · simulated"
+                          : "✓ synced"}
               </span>
+              {item.execute?.state === "done" && item.execute.deepLink && (
+                <a
+                  href={item.execute.deepLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-0.5 text-xs text-teal-300 transition-colors hover:bg-teal-500/20"
+                >
+                  View in Xero ↗
+                </a>
+              )}
+              {item.execute?.state === "failed" && item.execute.error && (
+                <span className="max-w-xs truncate text-xs text-red-400" title={item.execute.error}>
+                  {item.execute.error}
+                </span>
+              )}
               <span className="ml-auto">
                 <ConfidenceBadge value={payload.overall_confidence} />
               </span>

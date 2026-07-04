@@ -50,19 +50,31 @@ export async function mapPayload(
   return post<MappedPayload>("/api/map", { recipe, profile, record });
 }
 
-// Result of a real Xero write via Dev A's Executor.
-export interface ExecuteResult {
-  id: string;
-  deep_link: string;
-  status: string;
-}
+export type { ExecuteResult } from "@/lib/contract";
+import type { ExecuteResult as ExecResult } from "@/lib/contract";
 
-// Write a (possibly human-edited) MappedPayload to Xero via Dev A.
+// Sentinel thrown when no Xero executor is configured — the UI degrades to
+// a simulated sync instead of showing an error on every row.
+export class ExecutorUnavailableError extends Error {}
+
+// Write a (possibly human-edited) MappedPayload to Xero.
 // Call this when a row auto-syncs or after the user accepts a ConfirmCard.
-// In the static build there is no backend, so this is a no-op stub.
-export async function executePayload(payload: MappedPayload): Promise<ExecuteResult> {
+// In the static build there is no backend, so callers should not invoke it.
+export async function executePayload(payload: MappedPayload): Promise<ExecResult> {
   if (IS_STATIC) {
-    return { id: "static-demo", deep_link: "#", status: "DRAFT" };
+    throw new ExecutorUnavailableError("static build");
   }
-  return post<ExecuteResult>("/api/execute", payload);
+  const res = await fetch("/api/execute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (res.status === 503) {
+    throw new ExecutorUnavailableError(data.error ?? "executor not configured");
+  }
+  if (!res.ok) {
+    throw new Error(data.error ?? `Execute failed (${res.status})`);
+  }
+  return data as ExecResult;
 }

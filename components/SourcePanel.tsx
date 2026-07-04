@@ -42,6 +42,25 @@ const QUICK_SOURCES = [
   },
 ];
 
+// Random header synonyms for the "prove nothing is hardcoded" demo moment:
+// scramble the Mystery CSV's column names live and rediscover.
+const HEADER_SYNONYMS: Record<string, string[]> = {
+  cust_nm: ["client", "customer_ref", "buyer", "account_name"],
+  amt_gbp: ["total_amt", "price_quoted", "value_gbp", "gross_amount"],
+  dt_closed: ["closed_on", "win_date", "date_won", "closed_at"],
+  deal: ["service_item", "product_line", "engagement", "work_description"],
+  stage: ["pipeline_phase", "deal_state", "status_code"],
+};
+
+function scrambleHeaders(csv: string): string {
+  const lines = csv.trim().split(/\r?\n/);
+  const headers = lines[0].split(",").map((h) => {
+    const options = HEADER_SYNONYMS[h.trim()];
+    return options ? options[Math.floor(Math.random() * options.length)] : h;
+  });
+  return [headers.join(","), ...lines.slice(1)].join("\n");
+}
+
 interface SourcePanelProps {
   onDiscovered: (profile: SourceProfile, rawText: string) => void;
 }
@@ -147,12 +166,28 @@ export default function SourcePanel({ onDiscovered }: SourcePanelProps) {
         })}
       </div>
 
-      <div className="text-center">
+      <div className="flex items-center justify-center gap-5">
+        <button
+          onClick={async () => {
+            if (busySource) return;
+            setError(null);
+            const res = await fetch("mock/unknown.csv");
+            const scrambled = scrambleHeaders(await res.text());
+            setText(scrambled);
+            setShowPaste(true);
+            await discover(scrambled, "scramble");
+          }}
+          disabled={busySource !== null}
+          className="text-xs text-slate-500 underline-offset-4 transition-colors hover:text-purple-300 hover:underline disabled:opacity-40"
+          title="Randomise the Mystery CSV's column names and rediscover — proof nothing is hardcoded"
+        >
+          {busySource === "scramble" ? "🎲 discovering scrambled headers…" : "🎲 scramble the CSV headers"}
+        </button>
         <button
           onClick={() => setShowPaste((v) => !v)}
           className="text-xs text-slate-500 underline-offset-4 transition-colors hover:text-teal-300 hover:underline"
         >
-          {showPaste ? "Hide" : "…or paste / upload your own data"}
+          {showPaste ? "Hide paste box" : "…or paste / upload your own data"}
         </button>
       </div>
 

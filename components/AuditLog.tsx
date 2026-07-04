@@ -3,6 +3,7 @@ export interface AuditEntry {
   time: string; // HH:MM:SS
   kind: "auto" | "confirmed";
   text: string;
+  link?: string; // deep link into Xero, when a real write happened
 }
 
 export default function AuditLog({ entries }: { entries: AuditEntry[] }) {
@@ -30,7 +31,22 @@ export default function AuditLog({ entries }: { entries: AuditEntry[] }) {
             >
               {e.kind === "auto" ? "auto" : "user"}
             </span>
-            <span className="text-slate-300">{e.text}</span>
+            <span className="text-slate-300">
+              {e.text}
+              {e.link && (
+                <>
+                  {" "}
+                  <a
+                    href={e.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-teal-400 underline-offset-2 hover:underline"
+                  >
+                    view ↗
+                  </a>
+                </>
+              )}
+            </span>
           </li>
         ))}
       </ul>

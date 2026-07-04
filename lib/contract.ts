@@ -25,7 +25,9 @@ export interface SourceField {
   sample: string;
 }
 export interface SourceProfile {
-  detected_format: "json" | "csv" | "webhook" | "unknown";
+  // "freetext" — prose intake (Slack / WhatsApp / email-style messages):
+  // fields is an empty array and the raw record is { text: string }.
+  detected_format: "json" | "csv" | "webhook" | "freetext" | "unknown";
   fields: SourceField[];
 }
 
@@ -51,5 +53,19 @@ export interface MappedPayload {
   needs_confirmation: boolean;        // true if any field < guardrail threshold
 }
 
-// A raw record from any source — arbitrary shape.
+// A raw record from any source — arbitrary shape. For freetext sources
+// this is { text: string }.
 export type SourceRecord = Record<string, unknown>;
+
+export interface MapRequest {
+  recipe: Recipe;
+  profile: SourceProfile;
+  record: SourceRecord;
+}
+
+// Result of a real Xero write via the Executor.
+export interface ExecuteResult {
+  id: string;
+  deep_link: string;
+  status: string;
+}
