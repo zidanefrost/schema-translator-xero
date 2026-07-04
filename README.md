@@ -35,6 +35,7 @@ SpeakSync has no hardcoded connectors. It discovers the shape of whatever data y
 
 - **The "any source" path** — load the *Mystery CSV* (cryptic headers, messy values, unknown origin) → discover → run. It maps to draft invoices, fuzzy-matches `acme ltd` → *Acme Limited*, parses currency strings, and normalises dates.
 - **The "second integration" path** — type *"When a Stripe payment succeeds, record it against the matching invoice"* and run it against the Stripe-shaped payment events. A completely different recipe and source shape works with zero code changes — nothing is hardcoded.
+- **The "it's not even data" path** — load the *Slack thread* or *Email inbox*. An extraction stage (`/api/extract-records`) reads plain human chatter ("closed Acme!! £3,200 for the website rebuild…"), pulls out structured deal records, ignores the off-topic messages, and keeps hedges like "i think the close date was july 1st?" as low-confidence notes — which then surface as confirm cards downstream.
 
 ## Getting started
 
@@ -60,6 +61,7 @@ app/
   api/
     compile-intent/route.ts    # Intent Compiler  — English → Recipe (LLM)
     discover-schema/route.ts   # Schema Discovery — raw payload → SourceProfile (LLM)
+    extract-records/route.ts   # Extraction — Slack/email prose → structured records (LLM)
     map/route.ts               # MOCK Mapping Engine (see below)
 components/
   DescribeBox.tsx              # plain-English input → recipe
@@ -77,6 +79,8 @@ public/mock/
   deals.json                   # CRM deals — clean + deliberately dirty rows
   unknown.csv                  # the cryptic-header "any source" demo
   payments.json                # Stripe-shaped payment events
+  slack.json                   # #sales-wins thread — deals buried in chatter
+  emails.json                  # inbox — deal confirmations in prose
 ```
 
 ## The integration contract
