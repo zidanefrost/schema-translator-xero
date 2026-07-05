@@ -5,7 +5,9 @@ import type { SourceRecord } from "@/lib/contract";
 // Extraction stage: unstructured business communication (Slack threads, emails,
 // chat transcripts) → flat structured records the rest of the pipeline can map.
 
-const SYSTEM_PROMPT = `You are given unstructured business communication — Slack messages, emails, or chat transcripts. Extract every distinct business transaction or deal mentioned into a flat JSON record.
+const SYSTEM_PROMPT = `Today's date is ${new Date().toISOString().slice(0, 10)} — use it to resolve relative or year-less dates.
+
+You are given unstructured business communication — Slack messages, emails, or chat transcripts. Extract every distinct business transaction or deal mentioned into a flat JSON record.
 
 Rules:
 - One record per distinct transaction/deal/payment, in the order mentioned.

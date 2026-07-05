@@ -24,6 +24,7 @@ export async function mapRecord(args: {
 
   const userContent = JSON.stringify(
     {
+      today: new Date().toISOString().slice(0, 10),
       recipe,
       profile,
       record,
