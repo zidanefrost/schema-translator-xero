@@ -49,5 +49,9 @@ export interface Executor {
   findInvoiceByNumber(
     invoiceNumber: string,
   ): Promise<{ invoiceId: string; status: string; amountDue: number } | null>;
+  findInvoiceByReference(
+    contactId: string,
+    reference: string,
+  ): Promise<{ id: string; deepLink: string; status: string } | null>;
   getDefaultPaymentAccountCode(): Promise<string>;
 }

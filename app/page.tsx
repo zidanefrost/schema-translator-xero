@@ -12,7 +12,15 @@ import Reveal from "@/components/Reveal";
 import Magnetic from "@/components/Magnetic";
 import SpotlightFX from "@/components/SpotlightFX";
 import { parseRecords } from "@/lib/parseSource";
-import { IS_STATIC, mapPayload, executePayload, ExecutorUnavailableError } from "@/lib/api";
+import {
+  IS_STATIC,
+  mapPayload,
+  executePayload,
+  ExecutorUnavailableError,
+  loadRules,
+  saveRule,
+  forgetRule,
+} from "@/lib/api";
 import type { MappedPayload, Recipe, SourceProfile, SourceRecord } from "@/lib/contract";
 
 function now(): string {
@@ -112,11 +120,25 @@ export default function Home() {
   // Once we learn no Xero executor is configured, stop trying: every row
   // becomes a clearly-labelled simulated sync instead of an error.
   const simulatedRef = useRef(IS_STATIC);
-  // Mappings the human has confirmed this session:
+  // Mappings the human has confirmed:
   // "action|fieldName|sourceField" -> auto-apply next time.
   const learnedRef = useRef<Set<string>>(new Set());
+  const [rememberedCount, setRememberedCount] = useState(0);
   const watchCounter = useRef(0);
   const watchIndex = useRef(0);
+
+  // Restore persisted rule memory — learning survives across sessions.
+  useEffect(() => {
+    let cancelled = false;
+    loadRules().then((rules) => {
+      if (cancelled) return;
+      for (const r of rules) learnedRef.current.add(r.key);
+      setRememberedCount(rules.length);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const threshold = recipe?.guardrails?.confirm_below_confidence ?? 0.8;
   const canRun = recipe !== null && profile !== null && records.length > 0 && !running;
@@ -228,7 +250,14 @@ export default function Home() {
     setFeed([]);
     try {
       for (let i = 0; i < records.length; i++) {
-        await processRecord(records[i], `row-${i}`);
+        // One bad record must never kill the run — log it and keep going.
+        try {
+          await processRecord(records[i], `row-${i}`);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          logAudit("auto", `Record ${i + 1} failed to map — skipped: ${msg}`);
+          setRunError(`Record ${i + 1} failed: ${msg}`);
+        }
         if (IS_STATIC && i < records.length - 1) await new Promise((r) => setTimeout(r, 250));
       }
     } catch (e) {
@@ -262,7 +291,17 @@ export default function Home() {
       // Accepting the mapped value as-is teaches the system this mapping
       // is fine; an edited value fixes this row without generalising.
       if (String(f.value ?? "") === String(newValue ?? "")) {
-        learnedRef.current.add(learnedKey(item.payload.action, f.name, f.source_field));
+        const key = learnedKey(item.payload.action, f.name, f.source_field);
+        if (!learnedRef.current.has(key)) {
+          learnedRef.current.add(key);
+          setRememberedCount((n) => n + 1);
+          void saveRule({
+            action: item.payload.action,
+            field: f.name,
+            sourceField: f.source_field,
+            value: typeof newValue === "string" ? newValue : null,
+          });
+        }
       }
       return { ...f, value: newValue, confidence: 1, rationale: "Confirmed by user." };
     });
@@ -287,6 +326,47 @@ export default function Home() {
       ),
     );
     void executeRow(id, payload, "confirmed");
+  }
+
+  /** Reopen a synced row the human disagrees with and forget the rules behind it. */
+  function challengeItem(id: string) {
+    const item = feed.find((it) => it.id === id);
+    if (!item) return;
+    let forgotten = 0;
+    for (const f of item.payload.fields) {
+      const key = learnedKey(item.payload.action, f.name, f.source_field);
+      if (learnedRef.current.has(key)) {
+        learnedRef.current.delete(key);
+        setRememberedCount((n) => Math.max(0, n - 1));
+        void forgetRule(key);
+        forgotten += 1;
+      }
+    }
+    const fields = item.payload.fields.map((f) => ({
+      ...f,
+      confidence: Math.min(f.confidence, 0.5),
+      rationale: "Flagged by you as incorrect — please review and correct.",
+    }));
+    const reopened: MappedPayload = {
+      ...item.payload,
+      fields,
+      overall_confidence: 0.5,
+      needs_confirmation: true,
+    };
+    logAudit(
+      "challenged",
+      `User challenged ${item.payload.action} for ${item.payload.contact.name}` +
+        (forgotten > 0 ? ` — forgot ${forgotten} learned rule(s) so it won't repeat.` : ".") +
+        (item.execute?.state === "done" ? " The Xero record was already written — edit it in Xero." : ""),
+      item.execute?.deepLink,
+    );
+    setFeed((prev) =>
+      prev.map((it) =>
+        it.id === id
+          ? { ...it, payload: reopened, status: "pending" as const, execute: undefined }
+          : it,
+      ),
+    );
   }
 
   return (
@@ -442,6 +522,9 @@ export default function Home() {
                       live — syncing new events as they arrive
                     </span>
                   )}
+                  {rememberedCount > 0 && (
+                    <Chip tone="purple">{rememberedCount} remembered rules</Chip>
+                  )}
                   {feed.length > 0 && (
                     <div className="flex items-center gap-2">
                       <Chip tone="teal">{syncedCount} synced</Chip>
@@ -457,7 +540,12 @@ export default function Home() {
                   {runError && <p className="text-xs text-red-400">{runError}</p>}
                 </div>
 
-                <SyncFeed items={feed} threshold={threshold} onConfirm={confirmItem} />
+                <SyncFeed
+                  items={feed}
+                  threshold={threshold}
+                  onConfirm={confirmItem}
+                  onChallenge={challengeItem}
+                />
                 <AuditLog entries={audit} />
               </div>
             </StepSection>

@@ -20,6 +20,24 @@ function deepLinkForInvoice(invoiceId: string): string {
   return `https://go.xero.com/app/invoicing/view/${invoiceId}`;
 }
 
+/** Pull the human-readable message(s) out of a Xero API error response. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function xeroErrorMessage(err: any): string {
+  const body = err?.response?.body;
+  const messages: string[] = [];
+  for (const el of body?.Elements ?? []) {
+    for (const ve of el?.ValidationErrors ?? []) {
+      if (ve?.Message) messages.push(String(ve.Message));
+    }
+  }
+  for (const ve of body?.ValidationErrors ?? []) {
+    if (ve?.Message) messages.push(String(ve.Message));
+  }
+  if (messages.length > 0) return messages.join("; ");
+  if (body?.Message) return String(body.Message);
+  return err instanceof Error ? err.message : String(err);
+}
+
 export const nodeExecutor: Executor = {
   async listContacts(): Promise<XeroContact[]> {
     const { client, tenantId } = await getXero();
@@ -78,6 +96,28 @@ export const nodeExecutor: Executor = {
     return { contactId: created.contactID, name: created.name ?? name, emailAddress: email };
   },
 
+
+  /** Existing (non-deleted) invoice for this contact with this reference, or null. */
+  async findInvoiceByReference(
+    contactId: string,
+    reference: string,
+  ): Promise<{ id: string; deepLink: string; status: string } | null> {
+    try {
+      const { client, tenantId } = await getXero();
+      const where = `Contact.ContactID==guid("${contactId}") AND Reference=="${reference.replace(/"/g, "")}" AND Status!="DELETED"`;
+      const res = await client.accountingApi.getInvoices(tenantId, undefined, where);
+      const inv = res.body.invoices?.[0];
+      if (!inv?.invoiceID) return null;
+      return {
+        id: inv.invoiceID,
+        deepLink: deepLinkForInvoice(inv.invoiceID),
+        status: String(inv.status ?? ""),
+      };
+    } catch {
+      return null; // lookup failure must never block the write
+    }
+  },
+
   async createInvoice(input: CreateInvoiceInput): Promise<ExecResult> {
     const { client, tenantId } = await getXero();
 
@@ -87,7 +127,16 @@ export const nodeExecutor: Executor = {
       contactId = contact.contactId;
     }
 
-    const res = await client.accountingApi.createInvoices(tenantId, {
+    // Opt-in idempotency: an explicit reference identifies the SAME source
+    // event, so a rerun returns the existing invoice instead of duplicating.
+    if (input.reference) {
+      const existing = await this.findInvoiceByReference(contactId, input.reference);
+      if (existing) return existing;
+    }
+
+    let res;
+    try {
+      res = await client.accountingApi.createInvoices(tenantId, {
       invoices: [
         {
           type: "ACCREC" as any,
@@ -105,7 +154,10 @@ export const nodeExecutor: Executor = {
           })),
         },
       ],
-    });
+      });
+    } catch (err) {
+      throw new Error(`Xero rejected the invoice: ${xeroErrorMessage(err)}`);
+    }
 
     const invoice = res.body.invoices?.[0];
     if (!invoice?.invoiceID) {
@@ -156,7 +208,9 @@ export const nodeExecutor: Executor = {
   async createPayment(input: CreatePaymentInput): Promise<ExecResult> {
     const { client, tenantId } = await getXero();
 
-    const res = await client.accountingApi.createPayments(tenantId, {
+    let res;
+    try {
+      res = await client.accountingApi.createPayments(tenantId, {
       payments: [
         {
           invoice: { invoiceID: input.invoiceId } as any,
@@ -165,7 +219,10 @@ export const nodeExecutor: Executor = {
           date: input.date,
         },
       ],
-    });
+      });
+    } catch (err) {
+      throw new Error(`Xero rejected the payment: ${xeroErrorMessage(err)}`);
+    }
 
     const payment = res.body.payments?.[0];
     if (!payment?.paymentID) {

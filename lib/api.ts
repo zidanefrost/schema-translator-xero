@@ -57,6 +57,60 @@ import type { ExecuteResult as ExecResult } from "@/lib/contract";
 // a simulated sync instead of showing an error on every row.
 export class ExecutorUnavailableError extends Error {}
 
+export interface LearnedRule {
+  key: string;
+  action: string;
+  field: string;
+  sourceField: string | null;
+  value: string | null;
+  confirmedAt: string;
+  timesApplied: number;
+}
+
+export async function loadRules(user?: string): Promise<LearnedRule[]> {
+  if (IS_STATIC) return [];
+  try {
+    const res = await fetch(`/api/rules${user ? `?user=${encodeURIComponent(user)}` : ""}`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { rules: LearnedRule[] };
+    return data.rules ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveRule(rule: {
+  user?: string;
+  action: string;
+  field: string;
+  sourceField: string | null;
+  value: string | null;
+}): Promise<void> {
+  if (IS_STATIC) return;
+  try {
+    await fetch("/api/rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rule),
+    });
+  } catch {
+    /* non-fatal */
+  }
+}
+
+export async function forgetRule(key: string, user?: string): Promise<void> {
+  if (IS_STATIC) return;
+  try {
+    await fetch("/api/rules", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, user }),
+    });
+  } catch {
+    /* non-fatal */
+  }
+}
+
 // Write a (possibly human-edited) MappedPayload to Xero.
 // Call this when a row auto-syncs or after the user accepts a ConfirmCard.
 // In the static build there is no backend, so callers should not invoke it.

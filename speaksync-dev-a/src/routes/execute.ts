@@ -60,11 +60,24 @@ executeRouter.post("/", async (req, res) => {
         ) ?? 0,
       );
 
+      const contactName = (payload.contact.name ?? "").trim();
+      if (!contactName) {
+        return res.status(400).json({ error: "Cannot create invoice: no customer name was resolved from the record." });
+      }
+      if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
+        return res.status(400).json({ error: `Cannot create invoice for ${contactName}: amount is missing or invalid.` });
+      }
+
+      // Idempotency is OPT-IN via an explicit reference identifying the SAME
+      // source event. No content-hash dedup - legitimate duplicates must write.
+      const reference = ((getField(payload, "Reference") as string) || "").trim() || undefined;
+
       const exec = await nodeExecutor.createInvoice({
         contactId: payload.contact.match === "existing" ? payload.contact.contact_id : undefined,
-        contactName: payload.contact.name,
+        contactName,
         status,
         date,
+        reference,
         lineItems: [{ description, quantity, unitAmount }],
       });
 
@@ -79,6 +92,9 @@ executeRouter.post("/", async (req, res) => {
 
       if (!invoiceRef) {
         return res.status(400).json({ error: "create_payment requires an invoice reference" });
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: `Cannot record payment against ${invoiceRef}: amount is missing or invalid.` });
       }
 
       // The mapper usually emits an invoice NUMBER (e.g. "INV-0043"), not a

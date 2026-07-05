@@ -50,9 +50,10 @@ interface SyncFeedProps {
   items: SyncItem[];
   threshold: number;
   onConfirm: (id: string, edits: { name: string; value: string }[]) => void;
+  onChallenge?: (id: string) => void;
 }
 
-export default function SyncFeed({ items, threshold, onConfirm }: SyncFeedProps) {
+export default function SyncFeed({ items, threshold, onConfirm, onChallenge }: SyncFeedProps) {
   if (items.length === 0) return null;
 
   return (
@@ -119,6 +120,15 @@ export default function SyncFeed({ items, threshold, onConfirm }: SyncFeedProps)
                 <span className="max-w-xs truncate text-xs text-red-400" title={item.execute.error}>
                   {item.execute.error}
                 </span>
+              )}
+              {status === "synced" && item.execute?.state !== "writing" && onChallenge && (
+                <button
+                  onClick={() => onChallenge(id)}
+                  title="Mark this mapping as wrong — reopens it and forgets any learned rule behind it"
+                  className="rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs text-red-300 transition-colors hover:bg-red-500/20"
+                >
+                  ✕ Challenge
+                </button>
               )}
               <span className="ml-auto">
                 <ConfidenceBadge value={payload.overall_confidence} />

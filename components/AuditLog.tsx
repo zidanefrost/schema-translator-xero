@@ -1,7 +1,7 @@
 export interface AuditEntry {
   id: string;
   time: string; // HH:MM:SS
-  kind: "auto" | "confirmed";
+  kind: "auto" | "confirmed" | "challenged";
   text: string;
   link?: string; // deep link into Xero, when a real write happened
 }
@@ -27,9 +27,15 @@ export default function AuditLog({ entries }: { entries: AuditEntry[] }) {
           >
             <span className="shrink-0 text-slate-600">{e.time}</span>
             <span
-              className={`shrink-0 ${e.kind === "auto" ? "text-teal-400" : "text-amber-400"}`}
+              className={`shrink-0 ${
+                e.kind === "auto"
+                  ? "text-teal-400"
+                  : e.kind === "challenged"
+                    ? "text-red-400"
+                    : "text-amber-400"
+              }`}
             >
-              {e.kind === "auto" ? "auto" : "user"}
+              {e.kind === "auto" ? "auto" : e.kind === "challenged" ? "challenge" : "user"}
             </span>
             <span className="text-slate-300">
               {e.text}

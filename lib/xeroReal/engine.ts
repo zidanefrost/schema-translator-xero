@@ -44,19 +44,23 @@ export async function mapRecordReal(args: {
     2,
   );
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 1500,
-    system: MAPPING_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent }],
-  });
+  let rawText = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 3000,
+      system: MAPPING_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userContent }],
+    });
 
-  const textBlock = response.content.find((b) => b.type === "text");
-  const rawText = textBlock && "text" in textBlock ? textBlock.text : "";
+    const textBlock = response.content.find((b) => b.type === "text");
+    rawText = textBlock && "text" in textBlock ? textBlock.text : "";
 
-  try {
-    return safeParseJSON<MappedPayload>(rawText);
-  } catch {
-    throw new MappingEngineError("Mapping Engine returned non-parseable output", rawText);
+    try {
+      return safeParseJSON<MappedPayload>(rawText);
+    } catch {
+      // Truncated/mangled JSON happens rarely - one clean retry fixes most.
+    }
   }
+  throw new MappingEngineError("Mapping Engine returned non-parseable output", rawText);
 }
